@@ -1,15 +1,9 @@
-# ==============================================================================
-# Python Core Artifacts
-# ==============================================================================
-# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
 
-# C extensions
 *.so
 
-# Distribution / packaging
 .Python
 build/
 develop-eggs/
@@ -29,10 +23,6 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# ==============================================================================
-# Virtual Environments (Highly Recommended)
-# ==============================================================================
-# Ignore local environments to avoid committing megabytes of dependency files
 .venv/
 venv/
 ENV/
@@ -41,20 +31,13 @@ ENV/
 pip-log.txt
 pip-delete-this-directory.txt
 
-# ==============================================================================
-# Sensitive Configurations & Environment Variables
-# ==============================================================================
-# Never commit your private API keys or database passwords
 .env
 .env.local
 .env.*
 instance/
 secrets.toml
 
-# ==============================================================================
-# Testing and Static Analysis
-# ==============================================================================
-# Test caches and coverage metrics
+
 .pytest_cache/
 .tox/
 .nox/
@@ -69,29 +52,21 @@ coverage.xml
 .flake8
 .ruffe_cache/
 
-# Type checkers
 .mypy_cache/
 .dmypy.json
 dmypy.json
 .pyre/
 .pytype/
 
-# Jupyter Notebook temporary checkpoints
 .ipynb_checkpoints
 
-# ==============================================================================
-# Common IDE & OS Clutter (Optional but helpful)
-# ==============================================================================
-# PyCharm / JetBrains
 .idea/
 
-# VS Code
 .vscode/
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
 
-# Operating System specific files
 .DS_Store
 Thumbs.db
