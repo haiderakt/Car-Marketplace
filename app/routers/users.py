@@ -11,7 +11,7 @@ router = APIRouter()
 
 
 
-@router.get("/")
+@router.get("/", response_model=list[UserResponse])
 def get_users(db: Session = Depends(get_db)):
     users = db.query(User).all()
 
@@ -43,3 +43,4 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
 @router.get("/me", response_model=UserResponse)
 def get_current_user_info(current_user: User = Depends(get_current_user)):
     return current_user
+
