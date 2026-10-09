@@ -19,6 +19,8 @@ class Car(Base):
     model: Mapped[str] = mapped_column(String(50))
     year: Mapped[int]
     price: Mapped[int]
+    listing_type: Mapped[str] = mapped_column(String(10),default="both", nullable=False)
+    rental_price_per_day: Mapped[int | None] = mapped_column(nullable=True)
     images: Mapped[list["CarImage"]] = relationship(
     back_populates="car",
     cascade="all, delete-orphan",

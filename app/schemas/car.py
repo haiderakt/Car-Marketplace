@@ -1,4 +1,5 @@
 from pydantic import BaseModel, ConfigDict
+from typing import Literal
 
 
 class CarCreate(BaseModel):
@@ -6,6 +7,8 @@ class CarCreate(BaseModel):
     model: str
     year: int
     price: int
+    listing_type: Literal["sale", "rent", "both"] = "both"
+    rental_price_per_day: int | None = None
 
 class CarImageResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -22,6 +25,8 @@ class CarResponse(BaseModel):
     year: int
     images: list[CarImageResponse] = []
     price: int
+    listing_type: Literal["sale", "rent", "both"]
+    rental_price_per_day: int | None
 
     class Config:
         from_attributes = True
@@ -31,5 +36,7 @@ class CarUpdate(BaseModel):
     model: str
     year: int
     price: int
+    listing_type: Literal["sale", "rent", "both"] = "both"
+    rental_price_per_day: int | None = None
 
 

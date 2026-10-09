@@ -4,7 +4,6 @@ from app.database import get_db
 from app.models import Car, User
 from app.schemas.car import CarCreate, CarResponse, CarUpdate
 from app.auth import get_current_user
-from sqlalchemy import asc, desc
 
 router = APIRouter()
 
@@ -54,6 +53,8 @@ def create_car(car: CarCreate, db: Session = Depends(get_db), current_user: User
         model=car.model,
         year=car.year,
         price=car.price,
+        listing_type=car.listing_type,
+        rental_price_per_day=car.rental_price_per_day,
     )
 
     db.add(new_car)
@@ -95,6 +96,8 @@ def update_car(car_id: int, car: CarUpdate, db: Session = Depends(get_db), curre
     car_to_update.model = car.model
     car_to_update.year = car.year
     car_to_update.price = car.price
+    car_to_update.listing_type = car.listing_type
+    car_to_update.rental_price_per_day = car.rental_price_per_day
 
     db.commit()
     db.refresh(car_to_update)

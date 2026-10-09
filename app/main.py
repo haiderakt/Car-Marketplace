@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from pathlib import Path
 from fastapi.staticfiles import StaticFiles
-from app.routers import users, cars, auth, car_images
+from app.routers import users, cars, auth, rentals
 from fastapi.openapi.utils import get_openapi
 
 app=FastAPI()
@@ -12,8 +12,8 @@ app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 
 app.include_router(users.router, prefix="/users")
 app.include_router(cars.router, prefix="/cars")
+app.include_router(rentals.router, prefix="/rentals")
 app.include_router(auth.router, prefix="/auth")
-app.include_router(car_images.router)
 
 def custom_openapi():
     if app.openapi_schema:
