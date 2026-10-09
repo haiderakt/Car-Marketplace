@@ -63,6 +63,35 @@ def create_car(car: CarCreate, db: Session = Depends(get_db), current_user: User
 
     return new_car
 
+@router.get("/for-sale", response_model=list[CarResponse])
+def get_cars_for_sale(db: Session = Depends(get_db), skip: int = Query(default=0, ge=0), limit: int = Query(default=10, ge=1, le=100)):
+    return (db.query(Car).filter(Car.listing_type.in_(["sale", "both"])).order_by(Car.id.desc()).offset(skip).limit(limit).all())
+
+@router.get("/for-rent", response_model=list[CarResponse])
+def get_cars_for_rent(db: Session = Depends(get_db), skip: int = Query(default=0, ge=0),
+                      limit: int = Query(default=10, ge=1, le=100)):
+    return (
+        db.query(Car)
+        .filter(Car.listing_type.in_(["rent", "both"]))
+        .filter(Car.rental_price_per_day.is_not(None))
+        .order_by(Car.id.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
+@router.get("/my-listings", response_model=list[CarResponse])
+def get_my_listings(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return (
+        db.query(Car)
+        .filter(Car.owner_id == current_user.id)
+        .filter(Car.listing_type.in_(["sale", "both"]))
+        .order_by(Car.id.desc())
+        .all()
+    )
 
 @router.get("/{car_id}", response_model=CarResponse)
 def get_car(car_id: int, db: Session = Depends(get_db)):
@@ -124,3 +153,4 @@ def delete_car(car_id: int, db: Session = Depends(get_db), current_user: User = 
     db.commit()
 
     return {"detail": "Car deleted successfully"}
+

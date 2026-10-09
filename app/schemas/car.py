@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from typing import Literal
 
 
@@ -6,9 +6,20 @@ class CarCreate(BaseModel):
     make: str
     model: str
     year: int
-    price: int
+    price: int = Field(gt=0)
+
     listing_type: Literal["sale", "rent", "both"] = "both"
-    rental_price_per_day: int | None = None
+    rental_price_per_day: int | None = Field(default=None, gt=0)
+
+    @model_validator(mode="after")
+    def validate_listing_prices(self):
+        if self.listing_type in ["rent", "both"]:
+            if self.rental_price_per_day is None:
+                raise ValueError(
+                    "Rental price per day is required for rental listings"
+                )
+
+        return self
 
 class CarImageResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)

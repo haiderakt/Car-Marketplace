@@ -17,7 +17,7 @@ def create_rental(rental: RentalCreate, db: Session = Depends(get_db), current_u
             detail="End date must be after start date",
         )
 
-    car = db.query(Car).filter(Car.id == rental.car_id).first()
+    car = db.query(Car).filter(Car.id == rental.car_id).with_for_update().first()
 
     if car is None:
         raise HTTPException(status_code=404, detail="Car not found")
@@ -56,9 +56,13 @@ def create_rental(rental: RentalCreate, db: Session = Depends(get_db), current_u
         status="confirmed",
     )
 
-    db.add(new_rental)
-    db.commit()
-    db.refresh(new_rental)
+    try:
+        db.add(new_rental)
+        db.commit()
+        db.refresh(new_rental)
+    except Exception:
+        db.rollback()
+        raise
 
     return new_rental
 
