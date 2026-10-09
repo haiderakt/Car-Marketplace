@@ -43,6 +43,7 @@ def get_cars(db: Session = Depends(get_db),
     else:
         query = query.order_by((getattr(Car, sort_by).desc()))
 
+
     return query.offset(skip).limit(limit).all()
 
 @router.post("/", response_model=CarResponse)
