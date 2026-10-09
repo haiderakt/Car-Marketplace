@@ -67,3 +67,33 @@ def get_my_rentals(db: Session = Depends(get_db), current_user: User = Depends(g
     rentals = (db.query(Rental).filter(Rental.renter_id == current_user.id).order_by(Rental.start_date.desc()).all())
 
     return rentals
+
+
+@router.patch("/{rental_id}/cancel", response_model=RentalResponse)
+def cancel_rental(rental_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    rental = (db.query(Rental).filter(Rental.id == rental_id).first())
+
+    if rental is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Rental not found",
+        )
+
+    if rental.renter_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="You can only cancel your own rentals",
+        )
+
+    if rental.status != "confirmed":
+        raise HTTPException(
+            status_code=400,
+            detail="Only confirmed rentals can be cancelled",
+        )
+
+    rental.status = "cancelled"
+
+    db.commit()
+    db.refresh(rental)
+
+    return rental
