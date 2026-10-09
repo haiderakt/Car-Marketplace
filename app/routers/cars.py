@@ -1,20 +1,49 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Car, User
 from app.schemas.car import CarCreate, CarResponse, CarUpdate
 from app.auth import get_current_user
+from sqlalchemy import asc, desc
 
 router = APIRouter()
 
 
-
 @router.get("/", response_model=list[CarResponse])
-def get_cars(db: Session = Depends(get_db)):
-    cars = db.query(Car).all()
+def get_cars(db: Session = Depends(get_db),
+             make: str | None = None, model: str | None = None, year: int | None = None,
+             skip: int = Query(default=0, ge=0), limit: int = Query(default=10, ge=1, le=100),
+             sort_by: str = Query(default="id"),
+             sort_order: str = Query(default="asc")):
+    query = db.query(Car)
 
-    return cars
+    if make is not None:
+        query = query.filter(Car.make == make)
 
+    if model is not None:
+        query = query.filter(Car.model == model)
+
+    if year is not None:
+        query = query.filter(Car.year == year)
+
+    if sort_by not in ["id", "make", "model", "year", "price"]:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid sort field",
+        )
+
+    if sort_order not in ["asc", "desc"]:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid sort order",
+        )
+
+    if sort_order == "asc":
+        query = query.order_by((getattr(Car, sort_by).asc()))
+    else:
+        query = query.order_by((getattr(Car, sort_by).desc()))
+
+    return query.offset(skip).limit(limit).all()
 
 @router.post("/", response_model=CarResponse)
 def create_car(car: CarCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -45,7 +74,7 @@ def get_car(car_id: int, db: Session = Depends(get_db)):
 
     return car
 
-@router.put("/{car_id}", response_model=CarUpdate)
+@router.put("/{car_id}", response_model=CarResponse)
 def update_car(car_id: int, car: CarUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     car_to_update = db.query(Car).filter(Car.id==car_id).first()
 
@@ -70,3 +99,24 @@ def update_car(car_id: int, car: CarUpdate, db: Session = Depends(get_db), curre
     db.refresh(car_to_update)
 
     return car_to_update
+
+
+@router.delete("/{car_id}")
+def delete_car(car_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    car = db.query(Car).filter(Car.id==car_id).first()
+
+    if car is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Car not found",
+        )
+    if car.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="You can only delete your own cars",
+        )
+
+    db.delete(car)
+    db.commit()
+
+    return {"detail": "Car deleted successfully"}
