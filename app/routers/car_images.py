@@ -47,7 +47,7 @@ async def upload_car_image(car_id: int, file: UploadFile = File(...), db: Sessio
             if image.format not in ALLOWED_FORMATS:
                 raise HTTPException(
                     status_code=415,
-                    detail="Only JPEG, PNG and WenP images are allowed",
+                    detail="Only JPEG, PNG and WebP images are allowed",
                 )
             image.verify()
 
@@ -56,6 +56,8 @@ async def upload_car_image(car_id: int, file: UploadFile = File(...), db: Sessio
             status_code=400,
             detail="Invalid image format"
         )
+
+    original_path.write_bytes(contents)
 
     try:
         optimized_path = create_optimized_image(original_path, image_id)
