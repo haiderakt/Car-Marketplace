@@ -56,3 +56,35 @@ async def upload_car_image(car_id: int, file: UploadFile = File(...), db: Sessio
             status_code=400,
             detail="Invalid image format"
         )
+
+    try:
+        optimized_path = create_optimized_image(original_path, image_id)
+    except(UnidentifiedImageError, OSError, ValueError):
+        original_path.unlink(missing_ok=True)
+        raise HTTPException(
+            status_code=400,
+            detail="Could not process Image"
+        )
+
+    car_image = CarImage(
+        car_id=car.id,
+        original_path=str(original_path),
+        optimized_path=str(optimized_path),
+    )
+
+    try:
+        db.add(car_image)
+        db.commit()
+        db.refresh(car_image)
+    except Exception:
+        db.rollback()
+        original_path.unlink(missing_ok=True)
+        optimized_path.unlink(missing_ok=True)
+        raise
+
+    return {
+        "id": car_image.id,
+        "car_id": car_image.car_id,
+        "original_url": f"/uploads/cars/originals/{image_id}.upload",
+        "optimized_url": f"/uploads/cars/optimized/{image_id}.webp",
+    }
