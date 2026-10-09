@@ -23,3 +23,9 @@ class CarUpdate(BaseModel):
     model: str
     year: int
     price: int
+
+class CarImageResponse(BaseModel):
+    id: int
+    car_id: int
+    original_url: str
+    optimized_url: str

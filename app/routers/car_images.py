@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from PIL import Image, UnidentifiedImageError
 from sqlalchemy.orm import Session
 
+from app.schemas.car import CarImageResponse
 from app.auth import get_current_user
 from app.database import get_db
 from app.image_utils import create_optimized_image
@@ -90,3 +91,26 @@ async def upload_car_image(car_id: int, file: UploadFile = File(...), db: Sessio
         "original_url": f"/uploads/cars/originals/{image_id}.upload",
         "optimized_url": f"/uploads/cars/optimized/{image_id}.webp",
     }
+
+
+@router.get("/cars/{car_id}/images", response_model=list[CarImageResponse])
+def get_car_images(
+    car_id: int,
+    db: Session = Depends(get_db),
+):
+    car = db.query(Car).filter(Car.id == car_id).first()
+
+    if car is None:
+        raise HTTPException(status_code=404, detail="Car not found")
+
+    images = db.query(CarImage).filter(CarImage.car_id == car_id).all()
+
+    return [
+        {
+            "id": image.id,
+            "car_id": image.car_id,
+            "original_url": "/" + image.original_path.replace("\\", "/"),
+            "optimized_url": "/" + image.optimized_path.replace("\\", "/"),
+        }
+        for image in images
+    ]
