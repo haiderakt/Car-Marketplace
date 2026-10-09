@@ -61,3 +61,9 @@ def create_rental(rental: RentalCreate, db: Session = Depends(get_db), current_u
     db.refresh(new_rental)
 
     return new_rental
+
+@router.get("/", response_model=list[RentalResponse])
+def get_my_rentals(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    rentals = (db.query(Rental).filter(Rental.renter_id == current_user.id).order_by(Rental.start_date.desc()).all())
+
+    return rentals
