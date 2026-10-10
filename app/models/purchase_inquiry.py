@@ -19,6 +19,11 @@ class PurchaseInquiry(Base):
         nullable=False,
     )
 
+    seller_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", name="fk_purchase_inquiries_seller_id_users"),
+        nullable=False,
+    )
+
     message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     status: Mapped[str] = mapped_column(

@@ -14,7 +14,7 @@ def get_cars(db: Session = Depends(get_db),
              skip: int = Query(default=0, ge=0), limit: int = Query(default=10, ge=1, le=100),
              sort_by: str = Query(default="id"),
              sort_order: str = Query(default="asc")):
-    query = db.query(Car)
+    query = db.query(Car).filter(Car.is_sold.is_(False))
 
     if make is not None:
         query = query.filter(Car.make == make)
@@ -65,13 +65,14 @@ def create_car(car: CarCreate, db: Session = Depends(get_db), current_user: User
 
 @router.get("/for-sale", response_model=list[CarResponse])
 def get_cars_for_sale(db: Session = Depends(get_db), skip: int = Query(default=0, ge=0), limit: int = Query(default=10, ge=1, le=100)):
-    return (db.query(Car).filter(Car.listing_type.in_(["sale", "both"])).order_by(Car.id.desc()).offset(skip).limit(limit).all())
+    return (db.query(Car).filter(Car.is_sold.is_(False)).filter(Car.listing_type.in_(["sale", "both"])).order_by(Car.id.desc()).offset(skip).limit(limit).all())
 
 @router.get("/for-rent", response_model=list[CarResponse])
 def get_cars_for_rent(db: Session = Depends(get_db), skip: int = Query(default=0, ge=0),
                       limit: int = Query(default=10, ge=1, le=100)):
     return (
         db.query(Car)
+        .filter(Car.is_sold.is_(False))
         .filter(Car.listing_type.in_(["rent", "both"]))
         .filter(Car.rental_price_per_day.is_not(None))
         .order_by(Car.id.desc())
@@ -89,7 +90,7 @@ def get_my_listings(
     if current_user.role != "admin":
         query = query.filter(Car.owner_id == current_user.id)
 
-    return query.order_by(Car.id.desc()).all()
+    return query.filter(Car.is_sold.is_(False)).order_by(Car.id.desc()).all()
 
 @router.get("/{car_id}", response_model=CarResponse)
 def get_car(car_id: int, db: Session = Depends(get_db)):
@@ -119,6 +120,12 @@ def update_car(car_id: int, car: CarUpdate, db: Session = Depends(get_db), curre
             detail="You can only update your own cars",
         )
 
+    if car_to_update.is_sold:
+        raise HTTPException(
+            status_code=400,
+            detail="A sold car cannot be updated",
+        )
+
     car_to_update.make = car.make
     car_to_update.model = car.model
     car_to_update.year = car.year
@@ -145,6 +152,12 @@ def delete_car(car_id: int, db: Session = Depends(get_db), current_user: User = 
         raise HTTPException(
             status_code=403,
             detail="You can only delete your own cars",
+        )
+
+    if car.is_sold:
+        raise HTTPException(
+            status_code=400,
+            detail="A sold car cannot be deleted",
         )
 
     db.delete(car)

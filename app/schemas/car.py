@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from typing import Literal
 
@@ -40,6 +42,8 @@ class CarResponse(BaseModel):
     price: int
     listing_type: Literal["sale", "rent", "both"]
     rental_price_per_day: int | None
+    is_sold: bool
+    sold_at: datetime | None
 
     class Config:
         from_attributes = True
@@ -62,4 +66,3 @@ class CarUpdate(BaseModel):
                 )
 
         return self
-

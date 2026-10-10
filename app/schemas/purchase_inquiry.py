@@ -16,6 +16,7 @@ class PurchaseInquiryResponse(BaseModel):
     id: int
     car_id: int
     buyer_id: int
+    seller_id: int
     message: str | None
     status: str
 

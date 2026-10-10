@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -22,6 +24,9 @@ def create_purchase_inquiry(inquiry_data: PurchaseInquiryCreate, db: Session = D
     car = db.query(Car).filter(Car.id == inquiry_data.car_id).first()
     if car is None:
         raise HTTPException(status_code=404, detail="Car not found")
+
+    if car.is_sold:
+        raise HTTPException(status_code=400, detail="This car has already been sold")
 
     if car.listing_type not in ["sale", "both"]:
         raise HTTPException(status_code=400, detail="This car is not listed for sale")
@@ -59,6 +64,7 @@ def create_purchase_inquiry(inquiry_data: PurchaseInquiryCreate, db: Session = D
     new_inquiry = PurchaseInquiry(
         car_id = car.id,
         buyer_id = current_user.id,
+        seller_id = car.owner_id,
         message = inquiry_data.message,
         status = "pending",
     )
@@ -102,9 +108,9 @@ def get_inquiries_for_my_cars(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    query = db.query(PurchaseInquiry).join(Car, PurchaseInquiry.car_id == Car.id)
+    query = db.query(PurchaseInquiry)
     if current_user.role != "admin":
-        query = query.filter(Car.owner_id == current_user.id)
+        query = query.filter(PurchaseInquiry.seller_id == current_user.id)
     inquiries = query.order_by(PurchaseInquiry.id.desc()).all()
 
     return inquiries
@@ -131,12 +137,12 @@ def get_purchase_inquiry_messages(
 
     if (
         inquiry.buyer_id != current_user.id
-        and car.owner_id != current_user.id
+        and inquiry.seller_id != current_user.id
         and current_user.role != "admin"
     ):
         raise HTTPException(
             status_code=403,
-            detail="Only the buyer or car's owner can view these messages",
+            detail="Only the buyer or seller can view these messages",
         )
 
     return (
@@ -170,18 +176,18 @@ def create_purchase_inquiry_message(
 
     if (
         inquiry.buyer_id != current_user.id
-        and car.owner_id != current_user.id
+        and inquiry.seller_id != current_user.id
         and current_user.role != "admin"
     ):
         raise HTTPException(
             status_code=403,
-            detail="Only the buyer or car's owner can send messages",
+            detail="Only the buyer or seller can send messages",
         )
 
-    if inquiry.status == "rejected":
+    if inquiry.status in ["rejected", "completed"]:
         raise HTTPException(
             status_code=400,
-            detail="You cannot send messages to a rejected inquiry",
+            detail="You cannot send messages to a closed inquiry",
         )
 
     new_message = PurchaseInquiryMessage(
@@ -199,6 +205,77 @@ def create_purchase_inquiry_message(
         raise
 
     return new_message
+
+
+@router.post(
+    "/{inquiry_id}/complete",
+    response_model=PurchaseInquiryResponse,
+)
+def complete_purchase(
+    inquiry_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    inquiry = db.query(PurchaseInquiry).filter(PurchaseInquiry.id == inquiry_id).first()
+
+    if inquiry is None:
+        raise HTTPException(status_code=404, detail="Purchase inquiry not found")
+
+    if inquiry.seller_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Only the seller can confirm this purchase",
+        )
+
+    if inquiry.status != "accepted":
+        raise HTTPException(
+            status_code=400,
+            detail="Only accepted inquiries can be completed",
+        )
+
+    car = (
+        db.query(Car)
+        .filter(Car.id == inquiry.car_id)
+        .with_for_update()
+        .first()
+    )
+
+    if car is None:
+        raise HTTPException(status_code=404, detail="Car not found")
+
+    if car.is_sold:
+        raise HTTPException(status_code=400, detail="This car has already been sold")
+
+    if car.listing_type not in ["sale", "both"]:
+        raise HTTPException(
+            status_code=400,
+            detail="This car is no longer listed for sale",
+        )
+
+    try:
+        car.is_sold = True
+        car.sold_at = datetime.now(timezone.utc)
+        car.owner_id = inquiry.buyer_id
+        inquiry.status = "completed"
+
+        other_inquiries = (
+            db.query(PurchaseInquiry)
+            .filter(PurchaseInquiry.car_id == car.id)
+            .filter(PurchaseInquiry.id != inquiry.id)
+            .filter(PurchaseInquiry.status.in_(["pending", "accepted"]))
+            .all()
+        )
+
+        for other_inquiry in other_inquiries:
+            other_inquiry.status = "rejected"
+
+        db.commit()
+        db.refresh(inquiry)
+    except Exception:
+        db.rollback()
+        raise
+
+    return inquiry
 
 
 @router.patch("/{inquiry_id}/status", response_model=PurchaseInquiryResponse)
@@ -228,7 +305,13 @@ def update_purchase_inquiry_status(
             detail="Car not found",
         )
 
-    if car.owner_id != current_user.id and current_user.role != "admin":
+    if car.is_sold or car.listing_type not in ["sale", "both"]:
+        raise HTTPException(
+            status_code=400,
+            detail="This car is no longer available for sale",
+        )
+
+    if inquiry.seller_id != current_user.id and current_user.role != "admin":
         raise HTTPException(
             status_code=403,
             detail="Only the car's owner can update this inquiry",

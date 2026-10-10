@@ -22,6 +22,9 @@ def create_rental(rental: RentalCreate, db: Session = Depends(get_db), current_u
     if car is None:
         raise HTTPException(status_code=404, detail="Car not found")
 
+    if car.is_sold:
+        raise HTTPException(status_code=400, detail="This car has already been sold")
+
     if car.owner_id == current_user.id and current_user.role != "admin":
         raise HTTPException(status_code=400, detail="You cannot rent your own car")
 

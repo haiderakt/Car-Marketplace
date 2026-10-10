@@ -1,4 +1,6 @@
-from sqlalchemy import String, ForeignKey
+from datetime import datetime
+
+from sqlalchemy import Boolean, DateTime, String, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.user import User
 from typing import TYPE_CHECKING
@@ -21,6 +23,16 @@ class Car(Base):
     price: Mapped[int]
     listing_type: Mapped[str] = mapped_column(String(10),default="both", nullable=False)
     rental_price_per_day: Mapped[int | None] = mapped_column(nullable=True)
+    is_sold: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        server_default="false",
+        nullable=False,
+    )
+    sold_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
     images: Mapped[list["CarImage"]] = relationship(
     back_populates="car",
     cascade="all, delete-orphan",
