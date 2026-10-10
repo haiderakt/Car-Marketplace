@@ -22,6 +22,20 @@ def create_purchase_inquiry(inquiry_data: PurchaseInquiryCreate, db: Session = D
     if car.owner_id == current_user.id and current_user.role != "admin":
         raise HTTPException(status_code=400, detail="You cannot inquire about your own car")
 
+    existing_inquiry = (
+        db.query(PurchaseInquiry)
+        .filter(PurchaseInquiry.car_id == car.id)
+        .filter(PurchaseInquiry.buyer_id == current_user.id)
+        .filter(PurchaseInquiry.status.in_(["pending", "accepted"]))
+        .first()
+    )
+
+    if existing_inquiry is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="You already have a pending or accepted inquiry for this car",
+        )
+
     new_inquiry = PurchaseInquiry(
         car_id = car.id,
         buyer_id = current_user.id,
@@ -103,6 +117,21 @@ def update_purchase_inquiry_status(
             status_code=400,
             detail="Only pending inquiries can be accepted or rejected",
         )
+
+    if status_data.status == "accepted":
+        existing_accepted = (
+            db.query(PurchaseInquiry)
+            .filter(PurchaseInquiry.car_id == inquiry.car_id)
+            .filter(PurchaseInquiry.id != inquiry.id)
+            .filter(PurchaseInquiry.status == "accepted")
+            .first()
+        )
+
+        if existing_accepted is not None:
+            raise HTTPException(
+                status_code=400,
+                detail="This car already has an accepted inquiry",
+            )
 
     inquiry.status = status_data.status
 

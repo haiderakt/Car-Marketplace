@@ -89,7 +89,7 @@ def get_my_listings(
     if current_user.role != "admin":
         query = query.filter(Car.owner_id == current_user.id)
 
-    return query.filter(Car.listing_type.in_(["sale", "both"])).order_by(Car.id.desc()).all()
+    return query.order_by(Car.id.desc()).all()
 
 @router.get("/{car_id}", response_model=CarResponse)
 def get_car(car_id: int, db: Session = Depends(get_db)):
