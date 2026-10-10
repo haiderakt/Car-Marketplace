@@ -26,7 +26,7 @@ async def upload_car_image(car_id: int, file: UploadFile = File(...), db: Sessio
     if car is None:
         raise HTTPException(status_code=404, detail="Car not found")
 
-    if car.owner_id != current_user.id:
+    if car.owner_id != current_user.id and current_user.role != "admin":
         raise HTTPException(status_code=403, detail="You can only upload images of your own car")
 
     image_id = str(uuid4())

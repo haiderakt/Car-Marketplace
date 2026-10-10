@@ -22,7 +22,7 @@ def create_rental(rental: RentalCreate, db: Session = Depends(get_db), current_u
     if car is None:
         raise HTTPException(status_code=404, detail="Car not found")
 
-    if car.owner_id == current_user.id:
+    if car.owner_id == current_user.id and current_user.role != "admin":
         raise HTTPException(status_code=400, detail="You cannot rent your own car")
 
     if car.listing_type not in ["rent", "both"]:
@@ -68,7 +68,10 @@ def create_rental(rental: RentalCreate, db: Session = Depends(get_db), current_u
 
 @router.get("/", response_model=list[RentalResponse])
 def get_my_rentals(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    rentals = (db.query(Rental).filter(Rental.renter_id == current_user.id).order_by(Rental.start_date.desc()).all())
+    query = db.query(Rental)
+    if current_user.role != "admin":
+        query = query.filter(Rental.renter_id == current_user.id)
+    rentals = query.order_by(Rental.start_date.desc()).all()
 
     return rentals
 
@@ -83,7 +86,7 @@ def cancel_rental(rental_id: int, db: Session = Depends(get_db), current_user: U
             detail="Rental not found",
         )
 
-    if rental.renter_id != current_user.id:
+    if rental.renter_id != current_user.id and current_user.role != "admin":
         raise HTTPException(
             status_code=403,
             detail="You can only cancel your own rentals",

@@ -85,13 +85,11 @@ def get_my_listings(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return (
-        db.query(Car)
-        .filter(Car.owner_id == current_user.id)
-        .filter(Car.listing_type.in_(["sale", "both"]))
-        .order_by(Car.id.desc())
-        .all()
-    )
+    query = db.query(Car)
+    if current_user.role != "admin":
+        query = query.filter(Car.owner_id == current_user.id)
+
+    return query.filter(Car.listing_type.in_(["sale", "both"])).order_by(Car.id.desc()).all()
 
 @router.get("/{car_id}", response_model=CarResponse)
 def get_car(car_id: int, db: Session = Depends(get_db)):
@@ -115,7 +113,7 @@ def update_car(car_id: int, car: CarUpdate, db: Session = Depends(get_db), curre
             detail="Car not found",
         )
 
-    if car_to_update.owner_id != current_user.id:
+    if car_to_update.owner_id != current_user.id and current_user.role != "admin":
         raise HTTPException(
             status_code=403,
             detail="You can only update your own cars",
@@ -143,7 +141,7 @@ def delete_car(car_id: int, db: Session = Depends(get_db), current_user: User = 
             status_code=404,
             detail="Car not found",
         )
-    if car.owner_id != current_user.id:
+    if car.owner_id != current_user.id and current_user.role != "admin":
         raise HTTPException(
             status_code=403,
             detail="You can only delete your own cars",
@@ -153,4 +151,3 @@ def delete_car(car_id: int, db: Session = Depends(get_db), current_user: User = 
     db.commit()
 
     return {"detail": "Car deleted successfully"}
-
