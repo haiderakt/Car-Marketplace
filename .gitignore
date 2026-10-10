@@ -32,13 +32,11 @@ ENV/
 pip-log.txt
 pip-delete-this-directory.txt
 
-
 .env
 .env.local
 .env.*
 instance/
 secrets.toml
-
 
 .pytest_cache/
 .tox/
