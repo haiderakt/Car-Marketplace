@@ -3,6 +3,7 @@ __pycache__/
 *$py.class
 
 *.so
+car_marketplace.backup
 
 .Python
 build/
